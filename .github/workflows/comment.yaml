@@ -34,6 +34,7 @@ jobs:
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.sha }} # or .head.ref for branch name
 
       - uses: actions/github-script@v4
+        if: contains(github.event.comment.body, 'terraform format')
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -41,7 +42,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Thanks for reporting!'
+              body: '🤖 applying `terraform fmt -recursive` from pr!'
             })
 
       - name: adjust the terraform format
