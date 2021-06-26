@@ -11,27 +11,7 @@ jobs:
     steps:
       - name: debug github object including event payload and others
         run: echo "${{ toJSON(github) }}"
-      - uses: actions/github-script@v3
-        id: get-pr
-        with:
-          script: |
-            const request = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            }
-            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
-            try {
-              const result = await github.pulls.get(request)
-              return result.data
-            } catch (err) {
-              core.setFailed(`Request failed with error ${err}`)
-            }
-
       - uses: actions/checkout@v2
-        with:
-          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-
       - uses: actions/github-script@v4
         if: contains(github.event.comment.body, 'terraform format')
         with:
@@ -45,7 +25,7 @@ jobs:
             })
 
       - uses: actions/github-script@v4
-        if: contains(github.event.comment.body, 'terraform format')
+        if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform format')
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -57,7 +37,7 @@ jobs:
             })
 
       - name: adjust the terraform format
-        if: contains(github.event.comment.body, 'terraform format')
+        if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform format')
         run: |
           terraform fmt -recursive
           # git checkout ${GITHUB_REF##*/}
