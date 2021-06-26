@@ -51,5 +51,5 @@ jobs:
           git diff
           git config --global user.name "Atlantis Bot"
           git config --global user.email "finanzcheck-atlantis@users.noreply.github.com"
-          git commit -m "Apply terraform fmt -recursive from github actions"
+          git commit -am "Apply terraform fmt -recursive from github actions"
           git push
