@@ -1,4 +1,7 @@
 ---
+# https://github.com/actions/checkout/issues/331
+name: apply terraform format from comments
+
 on:
   issue_comment:
     types: [created]
@@ -6,14 +9,51 @@ on:
 jobs:
   pr-commented:
     name: PR commented
-    if: github.event.issue.pull_request
+    if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform format')
     runs-on: ubuntu-latest
     steps:
+      # debug payload
       - name: debug github object including event payload and others
         run: echo "${{ toJSON(github) }}"
-      - uses: actions/github-script@v3
-        id: get-pr
+      # react to the comment with "a reaction"
+      - uses: actions/github-script@v4
         with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.reactions.createForIssueComment({
+              comment_id: context.payload.comment.id,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              content: 'rocket'
+            })
+      # checkout and configure
+      - uses: actions/checkout@v2
+      - name: Checkout Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          hub pr checkout ${{ github.event.issue.number }}
+      # set git values
+      - name: adjust the terraform format
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      # perform adjustments and push
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.13.5
+      - run: terraform fmt -recursive
+      - id: pushing
+        run: |
+          git diff
+          echo "::set-output name=changes::$(git diff-index --name-only HEAD --)"
+          test -z "$(git diff-index --name-only HEAD --)" || git commit -am 'Apply `terraform fmt -recursive` from github actions 🚀'
+          git push
+      # comment after the update :)
+      - uses: actions/github-script@v4
+        id: prinfo
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const request = {
               owner: context.repo.owner,
@@ -27,29 +67,16 @@ jobs:
             } catch (err) {
               core.setFailed(`Request failed with error ${err}`)
             }
-
-      - uses: actions/checkout@v2
+      - name: don't forget to update
+        if: steps.pushing.outputs.changes
+        uses: actions/github-script@v4
         with:
-          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.sha }} # or .head.ref for branch name
-
-      - uses: actions/github-script@v4
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '👋 Thanks for reporting!'
-            })
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '🤖 done applying `terraform fmt -recursive` on the pr code!\n⚠️ don\'t forget to rebase\n```bash\ngit pull --rebase origin ${{ fromJSON(steps.prinfo.outputs.result).head.ref }}\n```'
+              })
 
-      - name: adjust the terraform format
-        if: contains(github.event.comment.body, 'terraform format')
-        run: |
-          terraform fmt -recursive
-          git diff
-          git config --global user.name "Atlantis Bot"
-          git config --global user.email "finanzcheck-atlantis@users.noreply.github.com"
-          git commit -m "Apply terraform fmt -recursive from github actions"
-          git push
+
