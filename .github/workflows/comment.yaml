@@ -48,6 +48,7 @@ jobs:
         if: contains(github.event.comment.body, 'terraform format')
         run: |
           terraform fmt -recursive
+          git checkout ${GITHUB_REF##*/}
           git diff
           git config --global user.name "Atlantis Bot"
           git config --global user.email "finanzcheck-atlantis@users.noreply.github.com"
