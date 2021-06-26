@@ -78,5 +78,3 @@ jobs:
                 repo: context.repo.repo,
                 body: '🤖 done applying `terraform fmt -recursive` on the pr code!\n⚠️ don\'t forget to rebase\n```bash\ngit pull --rebase origin ${{ fromJSON(steps.prinfo.outputs.result).head.ref }}\n```'
               })
-
-
