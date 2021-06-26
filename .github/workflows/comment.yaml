@@ -1,0 +1,56 @@
+---
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  pr-commented:
+    name: PR commented
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        id: get-pr
+        with:
+          script: |
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
+            try {
+              const result = await github.pulls.get(request)
+              return result.data
+            } catch (err) {
+              core.setFailed(`Request failed with error ${err}`)
+            }
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
+          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.sha }} # or .head.ref for branch name
+
+
+# on: issue_comment
+#     # types: [created, edited]
+
+# jobs:
+#   issuecomment:
+#     # if: contains(github.event.comment.html\_url, '/pull/') && contains(github.event.comment.body, 'commenttest')
+#     # if: github.event.issue.pull_request
+#     runs-on: ubuntu-latest
+#     name: check if someone comments
+#     steps:
+#       - uses: actions/checkout@v2
+#       - name: debug github object including event payload and others
+#         run: echo "${{ toJSON(github) }}"
+#       - uses: actions/github-script@v4
+#         with:
+#           github-token: ${{secrets.GITHUB_TOKEN}}
+#           script: |
+#             github.issues.createComment({
+#               issue_number: context.issue.number,
+#               owner: context.repo.owner,
+#               repo: context.repo.repo,
+#               body: '👋 Thanks for reporting!'
+#             })
