@@ -46,26 +46,31 @@ jobs:
           git push
       # comment after the update :)
       - uses: actions/github-script@v4
+        id: prinfo
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const result;
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
             try {
-              result = await github.pulls.get(
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: context.issue.number
-                }
-              )
+              const result = await github.pulls.get(request)
+              return result.data
             } catch (err) {
               core.setFailed(`Request failed with error ${err}`)
             }
+      - name: don't forget to update
+        uses: actions/github-script@v4
+        with:
+          script: |
             github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '🤖 done applying `terraform fmt -recursive` on the pr code!\n⚠️ don\'t forget to rebase\n```bash\ngit pull --rebase origin ${{ fromJSON(result).head.ref }}\n```'
-            })
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '🤖 done applying `terraform fmt -recursive` on the pr code!\n⚠️ don\'t forget to rebase\n```bash\ngit pull --rebase origin ${{ fromJSON(steps.prinfo.outputs.result).head.ref }}\n```'
+              })
 
 
