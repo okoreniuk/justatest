@@ -15,7 +15,6 @@ jobs:
       # react to the comment with "a reaction"
       - uses: actions/github-script@v4
         with:
-          event: github.event
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             github.reactions.createForIssueComment({
