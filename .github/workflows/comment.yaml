@@ -29,10 +29,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_URL="${{ github.event.issue.pull_request.url }}"
-          PR_NUM=${PR_URL##*/}
-          echo "Checking out from PR #${{ github.issue.number }} or ${PR_NUM}"
-          hub pr checkout ${PR_NUM}
+          hub pr checkout ${{ github.event.issue.number }}
       # set git values
       - name: adjust the terraform format
         run: |
@@ -44,7 +41,7 @@ jobs:
           terraform_version: 0.13.5
       - run: terraform fmt -recursive
       - run: git diff
-      - run: git commit -am "Apply terraform fmt -recursive from github actions 🚀"
+      - run: git commit -am 'Apply `terraform fmt -recursive` from github actions 🚀'
       - run: git push
       # comment after the update :)
       - uses: actions/github-script@v4
@@ -55,5 +52,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🤖 applying `terraform fmt -recursive` from pr!, don\'t forget to rebase\n```bash\ngit pull --rebase origin <BRANCH>\n```'
+              body: '🤖 applied `terraform fmt -recursive` on the pr code!, don\'t forget to rebase\n```bash\ngit pull --rebase origin <BRANCH>\n```'
             })
