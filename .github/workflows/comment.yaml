@@ -40,8 +40,10 @@ jobs:
         with:
           terraform_version: 0.13.5
       - run: terraform fmt -recursive
-      - run: |
+      - id: pushing
+        run: |
           git diff
+          echo "::set-output name=changes::$(git diff-index --name-only HEAD --)"
           test -z "$(git diff-index --name-only HEAD --)" || git commit -am 'Apply `terraform fmt -recursive` from github actions 🚀'
           git push
       # comment after the update :)
@@ -63,6 +65,7 @@ jobs:
               core.setFailed(`Request failed with error ${err}`)
             }
       - name: don't forget to update
+        if: ! steps.pushing.outputs.changes == ''
         uses: actions/github-script@v4
         with:
           script: |
