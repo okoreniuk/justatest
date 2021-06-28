@@ -1,4 +1,7 @@
 ---
+# https://github.com/actions/checkout/issues/331
+name: apply terraform format from comments
+
 on:
   issue_comment:
     types: [created]
@@ -65,7 +68,7 @@ jobs:
               core.setFailed(`Request failed with error ${err}`)
             }
       - name: don't forget to update
-        if: ! steps.pushing.outputs.changes == ''
+        if: steps.pushing.outputs.changes
         uses: actions/github-script@v4
         with:
           script: |
