@@ -28,9 +28,10 @@ jobs:
       - name: Checkout Pull Request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUM: ${{ github.issue.number }}
         run: |
-          echo "Checking out from PR #${PR_NUM}"
+          PR_URL="${{ github.event.issue.pull_request.url }}"
+          PR_NUM=${PR_URL##*/}
+          echo "Checking out from PR #${{ github.issue.number }} or ${PR_NUM}"
           hub pr checkout ${PR_NUM}
       # set git values
       - name: adjust the terraform format
