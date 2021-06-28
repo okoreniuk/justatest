@@ -28,13 +28,14 @@ jobs:
       - uses: actions/github-script@v4
         if: contains(github.event.comment.body, 'terraform format')
         with:
+          event: github.event
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             github.reactions.createForIssueComment({
-              comment_id: github.event.comment.id,
+              comment_id: context.payload.comment.id,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'rocket'
+              content: 'rocket'
             })
 
       # - name: adjust the terraform format
