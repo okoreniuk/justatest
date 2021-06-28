@@ -6,27 +6,14 @@ on:
 jobs:
   pr-commented:
     name: PR commented
-    if: github.event.issue.pull_request
+    if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform format')
     runs-on: ubuntu-latest
     steps:
+      # debug payload
       - name: debug github object including event payload and others
         run: echo "${{ toJSON(github) }}"
-      - uses: actions/checkout@v2
-      # - uses: actions/github-script@v4
-      #   if: contains(github.event.comment.body, 'terraform format')
-      #   with:
-      #     github-token: ${{secrets.GITHUB_TOKEN}}
-      #     script: |
-      #       github.issues.createComment({
-      #         issue_number: context.issue.number,
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         body: '🤖 applying `terraform fmt -recursive` from pr!, don\'t forget to rebase\n```bash\ngit pull --rebase origin <BRANCH>\n```'
-      #       })
-
       # react to the comment with "a reaction"
       - uses: actions/github-script@v4
-        if: contains(github.event.comment.body, 'terraform format')
         with:
           event: github.event
           github-token: ${{secrets.GITHUB_TOKEN}}
@@ -37,14 +24,35 @@ jobs:
               repo: context.repo.repo,
               content: 'rocket'
             })
-
-      # - name: adjust the terraform format
-      #   if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform format')
-      #   run: |
-      #     terraform fmt -recursive
-      #     # git checkout ${GITHUB_REF##*/}
-      #     git diff
-      #     git config --global user.name "Atlantis Bot"
-      #     git config --global user.email "finanzcheck-atlantis@users.noreply.github.com"
-      #     git commit -am "Apply terraform fmt -recursive from github actions"
-      #     git push
+      # checkout and configure
+      - uses: actions/checkout@v2
+      - name: Checkout Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking out from PR #${{ github.issue.number }}"
+          hub pr checkout ${{ github.issue.number }}
+      # set git values
+      - name: adjust the terraform format
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      # perform adjustments and push
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.13.5
+      - run: terraform fmt -recursive
+      - run: git diff
+      - run: git commit -am "Apply terraform fmt -recursive from github actions 🚀"
+      - run: git push
+      # comment after the update :)
+      - uses: actions/github-script@v4
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🤖 applying `terraform fmt -recursive` from pr!, don\'t forget to rebase\n```bash\ngit pull --rebase origin <BRANCH>\n```'
+            })
