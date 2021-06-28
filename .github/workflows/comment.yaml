@@ -43,17 +43,29 @@ jobs:
       - run: |
           git diff
           test -z "$(git diff-index --name-only HEAD --)" || git commit -am 'Apply `terraform fmt -recursive` from github actions 🚀'
-      - run: git push
+          git push
       # comment after the update :)
       - uses: actions/github-script@v4
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
+            const result;
+            try {
+              result = await github.pulls.get(
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number
+                }
+              )
+            } catch (err) {
+              core.setFailed(`Request failed with error ${err}`)
+            }
             github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🤖 applied `terraform fmt -recursive` on the pr code!, don\'t forget to rebase\n```bash\ngit pull --rebase origin <BRANCH>\n```'
+              body: '🤖 done applying `terraform fmt -recursive` on the pr code!\n⚠️ don\'t forget to rebase\n```bash\ngit pull --rebase origin ${{ fromJSON(result).head.ref }}\n```'
             })
 
 
